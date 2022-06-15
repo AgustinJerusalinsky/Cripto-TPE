@@ -1,7 +1,7 @@
 PWD = $(shell pwd)
 
 all:
-	gcc -o stegobmp main.c -Wall -pedantic -lcrypto
+	gcc -o stegobmp main.c args.c steg.c -Wall -pedantic -lcrypto
 
 docker:
 	docker build -t cripto .
