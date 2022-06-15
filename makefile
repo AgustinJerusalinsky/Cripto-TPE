@@ -13,3 +13,10 @@ start:
 
 stop:
 	docker stop cripto_container
+
+LSB1:
+	./stegobmp --extract -p ejemplo2022/ladoLSB1.bmp --out lsb1 --steg LSB1 
+
+LSB4:
+	./stegobmp --extract -p ejemplo2022/ladoLSB4.bmp --out lsb4 --steg LSB4
+

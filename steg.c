@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "args.h"
 #include "bmp.h"
@@ -27,7 +28,6 @@ void lsbN_embed(char* message, int msg_size, FILE* carrier, FILE* output, int n)
         }
     }
 }
-
 
 void embed_into_carrier(char* message, int msg_size, FILE* carrier, FILE* output) {
     switch (args.steg_method) {
@@ -91,35 +91,45 @@ void embed() {
     fclose(input);
 }
 
-
-void extract_lsbN_bytes(uint8_t * dest, FILE * carrier, int nbytes, int n){
-    uint8_t bytes[8/n];
+void extract_lsbN_bytes(uint8_t* dest, FILE* carrier, int nbytes, int n) {
+    uint8_t bytes[8 / n];
     for (int i = 0; i < nbytes; i++) {
-        fread(bytes, 1, 8/n, carrier);
+        fread(bytes, 1, 8 / n, carrier);
         uint8_t byte = 0;
 
-        for (int j = 0; j < 8/n; j++) {
-            byte = (byte<<n) | (bytes[j] & (0xFF >> (8-n)));
+        for (int j = 0; j < 8 / n; j++) {
+            byte = (byte << n) | (bytes[j] & (0xFF >> (8 - n)));
         }
         dest[i] = byte;
     }
 }
 
-void extract_lsbN(FILE * carrier, FILE * output, int n) {
-    uint8_t size[4];
-    extract_lsbN_bytes(size, carrier, 4, n);
-    uint32_t real_size = size[0] << 24 | size[1] << 16 | size[2] << 8 | size[3];
-    printf("size: %ul\n", real_size);
-    for (int i = 0; i < real_size; i++) {
-        uint8_t byte;
+char * extract_lsbN(FILE* carrier, char* extension, uint32_t* size, int n) {
+    // size
+    uint8_t big_endian_size[4];
+    extract_lsbN_bytes(big_endian_size, carrier, 4, n);
+
+    *size = big_endian_size[0] << 24 | big_endian_size[1] << 16 | big_endian_size[2] << 8 | big_endian_size[3];
+
+    char* output = malloc(*size + 1);
+
+    uint8_t byte;
+    // data
+    for (int i = 0; i < *size; i++) {
         extract_lsbN_bytes(&byte, carrier, 1, n);
-        fwrite(&byte, 1, 1, output);
+        output[i] = byte;
     }
 
-
-
+    // extension
+    int i = 0;
+    byte = -1;
+    while (byte != 0) {
+        extract_lsbN_bytes(&byte, carrier, 1, n);
+        extension[i] = byte;
+        i++;
+    }
+    return output;
 }
-
 
 void extract() {
     FILE* carrier = fopen(args.carrier, "rb");
@@ -134,16 +144,29 @@ void extract() {
     // jump to pixel map
     fseek(carrier, bmp_file_header.offset, SEEK_SET);
 
-    FILE* output = fopen(args.output_file, "wb");
-    
-    
-    
-    if (args.steg_method == LSB1) {
-        extract_lsbN(carrier, output, 1);
+    char extension[8];
+    uint32_t size;
+    char* output;
+    switch (args.steg_method) {
+        case LSB1:
+            output = extract_lsbN(carrier, extension, &size, 1);
+            break;
+        case LSB4:
+            output = extract_lsbN(carrier, extension, &size, 4);
+            break;
+        case LSBI:
+            // output = lsbi();
+            break;
     }
 
-    fclose(output);
-    fclose(carrier);
-
     // Decrpyt if necessary
+
+    // Open output file
+    char* output_filename = malloc(strlen(args.output_file) + strlen(extension) + 1);
+    strcpy(output_filename, args.output_file);
+    strcat(output_filename, extension);
+    FILE* output_file = fopen(output_filename, "wb");
+    fwrite(output, size, 1, output_file);
+    fclose(output_file);
+    fclose(carrier);
 }
