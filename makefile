@@ -1,7 +1,7 @@
 PWD = $(shell pwd)
 
 all:
-	gcc -o stegobmp main.c args.c steg.c -g -Wall -pedantic -lcrypto
+	gcc -o stegobmp main.c args.c steg.c encrypt.c -g -Wall -pedantic -lcrypto
 
 docker:
 	docker build -t cripto .
@@ -25,4 +25,13 @@ LSB1:
 
 LSB4:
 	./stegobmp --extract -p ejemplo2022/ladoLSB4.bmp --out lsb4 --steg LSB4
+
+DECLSB1192CBC:
+	./stegobmp --extract -p ejemplo2022/ladoLSB1aes192cbc.bmp --out lsb1 --steg LSB1 -a AES192 -m CBC --pass escondite
+
+ENCLSB1:
+	./stegobmp --embed -p ejemplo2022/lado.bmp --in ejemplo2022/itba.png --out lsb1_enc.bmp --steg LSB1 -a AES192 -m CBC --pass escondite
+
+DECLSB1:
+	./stegobmp --extract -p lsb1_enc.bmp --out lsb1_dec --steg LSB1 -a AES192 -m CBC --pass escondite
 

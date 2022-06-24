@@ -46,7 +46,7 @@ char* steg_methods[] = {"LSB1", "LSB4", "LSBI", 0};
 int steg_methods_ids[] = {LSB1, LSB4, LSBI};
 
 char* enc_methods[] = {"AES128", "AES192", "AES256", "DES", 0};
-int enc_methods_ids[] = {ECB, CFB, OFB, CBC};
+int enc_methods_ids[] = {AES128, AES192, AES256, DES};
 
 int map(char* names[], int* ids, char* key) {
     int i = 0;

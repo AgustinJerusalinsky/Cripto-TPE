@@ -4,6 +4,7 @@
 
 #include "args.h"
 #include "bmp.h"
+#include "encrypt.h"
 
 void embed_lsbN_bytes(char* message, int msg_size, FILE* carrier, FILE* output, int n);
 void extract_lsbN_bytes(uint8_t* dest, FILE* carrier, int nbytes, int n);
@@ -71,15 +72,16 @@ void embed_into_carrier(char* message, int msg_size, FILE* carrier, FILE* output
     // embed message
     embed_function(message, msg_size, carrier, output);
 
-    // embed extension
-    char* extension = strrchr(args.input_file, '.');
-    if (!extension) {
-        extension = "";
+    if (args.enc_method != NONE) {
+        // embed extension
+        char* extension = strrchr(args.input_file, '.');
+        if (!extension) {
+            extension = "";
+        }
+        printf("Extension: %s\n", extension);
+
+        embed_function(extension, strlen(extension) + 1, carrier, output);  //+1 for null terminated
     }
-    printf("Extension: %s\n", extension);
-
-    embed_function(extension, strlen(extension) + 1, carrier, output);  //+1 for null terminated
-
     // finish copying
     uint8_t byte;
     while (fread(&byte, 1, 1, carrier)) {
@@ -102,6 +104,32 @@ void embed() {
     fread(message, 1, fs, input);
 
     // Encrypt if necessary
+    if (args.enc_method != NONE) {
+        unsigned char* ciphertext = (unsigned char*)malloc(fs + MAX_BLOCK_SIZE);
+
+        char* extension = strrchr(args.input_file, '.');
+        if (!extension) {
+            extension = "";
+        }
+
+        unsigned char* plaintext = (unsigned char*)malloc(4 + fs + strlen(extension) + 1);
+
+        plaintext[0] = fs >> 24;
+        plaintext[1] = fs >> 16;
+        plaintext[2] = fs >> 8;
+        plaintext[3] = fs;
+        memcpy(plaintext + 4, message, fs);
+        memcpy(plaintext + 4 + fs, extension, strlen(extension) + 1);
+
+        fs = encrypt(plaintext, fs + 4 + strlen(extension) + 1, ciphertext);
+        if (fs == -1) {
+            printf("Encryption failed\n");
+            exit(1);
+        }
+        free(message);
+        free(plaintext);
+        message = (char*)ciphertext;
+    }
 
     // Open input file
     FILE* carrier = fopen(args.carrier, "rb");
@@ -175,6 +203,11 @@ char* extract_from_carrier(FILE* carrier, char* extension, uint32_t* size) {
         extract_function((uint8_t*)(output + i), carrier, 1);
     }
 
+    if (args.enc_method != NONE)
+        return output;
+
+    printf("extracting extension\n");
+
     // extract extension
     int i = 0;
     byte = -1;
@@ -183,6 +216,7 @@ char* extract_from_carrier(FILE* carrier, char* extension, uint32_t* size) {
         extension[i] = byte;
         i++;
     }
+
     return output;
 }
 
@@ -203,10 +237,28 @@ void extract() {
     uint32_t size;
     char* output;
 
+    printf("Extracting from carrier file...\n");
     output = extract_from_carrier(carrier, extension, &size);
 
     // Decrypt if necessary
-
+    if (args.enc_method != NONE) {
+        printf("decrypting... \n");
+        unsigned char* plaintext = (unsigned char*)malloc(size + MAX_BLOCK_SIZE);
+        int decr_size = decrypt((unsigned char*)output, size, plaintext);
+        printf("cipher size: %d\n", decr_size);
+        if (decr_size < 0) {
+            printf("decryption failed\n");
+            exit(1);
+        }
+        size = plaintext[0] << 24 | plaintext[1] << 16 | plaintext[2] << 8 | plaintext[3];
+        printf("decrypted size: %d\n", size);
+        free(output);
+        output = malloc(size + 1);
+        memcpy(output, (char*)plaintext + 4, size);
+        strcpy(extension, (char*)plaintext + 4 + size);
+        free(plaintext);
+    }
+    printf("dumping output...");
     // Open output file
     char* output_filename = malloc(strlen(args.output_file) + strlen(extension) + 1);
     strcpy(output_filename, args.output_file);
