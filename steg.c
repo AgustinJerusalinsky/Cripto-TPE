@@ -5,43 +5,85 @@
 #include "args.h"
 #include "bmp.h"
 
+void embed_lsbN_bytes(char* message, int msg_size, FILE* carrier, FILE* output, int n);
+void extract_lsbN_bytes(uint8_t* dest, FILE* carrier, int nbytes, int n);
+
+void embed_lsb1(char* buffer, int size, FILE* carrier, FILE* output) {
+    embed_lsbN_bytes(buffer, size, carrier, output, 1);
+}
+void embed_lsb4(char* buffer, int size, FILE* carrier, FILE* output) {
+    embed_lsbN_bytes(buffer, size, carrier, output, 4);
+}
+void embed_lsbi(char* buffer, int size, FILE* carrier, FILE* output) {
+}
+
+void extract_lsb1(uint8_t* dest, FILE* carrier, int nbytes) {
+    extract_lsbN_bytes(dest, carrier, nbytes, 1);
+}
+void extract_lsb4(uint8_t* dest, FILE* carrier, int nbytes) {
+    extract_lsbN_bytes(dest, carrier, nbytes, 4);
+}
+void extract_lsbi(uint8_t* dest, FILE* carrier, int nbytes) {
+}
+
 uint8_t get_bit(char* message, int bit_index) {
     int byte_index = bit_index / 8;
     int bit_offset = bit_index % 8;
     return (message[byte_index] >> (7 - bit_offset)) & 0x01;
 }
 
-void lsbN_embed(char* message, int msg_size, FILE* carrier, FILE* output, int n) {
+void embed_lsbN_bytes(char* message, int msg_size, FILE* carrier, FILE* output, int n) {
     int bit_index = 0;
     int max_bits = msg_size * 8;
     uint8_t byte;
-    while (fread(&byte, 1, 1, carrier)) {
-        if (bit_index >= max_bits) {
-            fwrite(&byte, 1, 1, output);
-        } else {
-            uint8_t bits = 0;
-            for (int i = 0; i < n; i++) {
-                bits = (bits << 1) | get_bit(message, bit_index);
-                bit_index++;
-            }
-            byte = (byte & (0xFF << n)) | bits;
+    while (bit_index < max_bits && fread(&byte, 1, 1, carrier)) {
+        uint8_t bits = 0;
+        for (int i = 0; i < n; i++) {
+            bits = (bits << 1) | get_bit(message, bit_index);
+            bit_index++;
         }
+        byte = (byte & (0xFF << n)) | bits;
+
+        fwrite(&byte, 1, 1, output);
     }
 }
 
 void embed_into_carrier(char* message, int msg_size, FILE* carrier, FILE* output) {
+    void (*embed_function)(char*, int, FILE*, FILE*);
+
     switch (args.steg_method) {
         case LSB1:
-            // lsb1(message, carrier, output);
-            lsbN_embed(message, msg_size, carrier, output, 1);
+            embed_function = embed_lsb1;
             break;
         case LSB4:
-            lsbN_embed(message, msg_size, carrier, output, 4);
-            // lsb4();
+            embed_function = embed_lsb4;
             break;
         case LSBI:
-            // lsbi();
+            embed_function = embed_lsbi;
             break;
+    }
+
+    // embed size
+    char big_endian_size[4] = {msg_size >> 24, msg_size >> 16, msg_size >> 8, msg_size};
+
+    embed_function(big_endian_size, 4, carrier, output);
+
+    // embed message
+    embed_function(message, msg_size, carrier, output);
+
+    // embed extension
+    char* extension = strrchr(args.input_file, '.');
+    if (!extension) {
+        extension = "";
+    }
+    printf("Extension: %s\n", extension);
+
+    embed_function(extension, strlen(extension) + 1, carrier, output);  //+1 for null terminated
+
+    // finish copying
+    uint8_t byte;
+    while (fread(&byte, 1, 1, carrier)) {
+        fwrite(&byte, 1, 1, output);
     }
 }
 
@@ -58,7 +100,6 @@ void embed() {
     printf("fs: %d\n", fs);
     char* message = malloc(fs + 1);
     fread(message, 1, fs, input);
-    printf("message: %s\n", message);
 
     // Encrypt if necessary
 
@@ -104,27 +145,41 @@ void extract_lsbN_bytes(uint8_t* dest, FILE* carrier, int nbytes, int n) {
     }
 }
 
-char * extract_lsbN(FILE* carrier, char* extension, uint32_t* size, int n) {
-    // size
-    uint8_t big_endian_size[4];
-    extract_lsbN_bytes(big_endian_size, carrier, 4, n);
+char* extract_from_carrier(FILE* carrier, char* extension, uint32_t* size) {
+    // extract function mapping
+    void (*extract_function)(uint8_t*, FILE*, int);
+    switch (args.steg_method) {
+        case LSB1:
+            extract_function = extract_lsb1;
+            break;
+        case LSB4:
+            extract_function = extract_lsb4;
+            break;
+        case LSBI:
+            extract_function = extract_lsbi;
+            break;
+    }
 
+    // extract size
+    uint8_t big_endian_size[4];
+    extract_function(big_endian_size, carrier, 4);
     *size = big_endian_size[0] << 24 | big_endian_size[1] << 16 | big_endian_size[2] << 8 | big_endian_size[3];
+    printf("size: %d\n", *size);
 
     char* output = malloc(*size + 1);
 
     uint8_t byte;
-    // data
+
+    // extract data
     for (int i = 0; i < *size; i++) {
-        extract_lsbN_bytes(&byte, carrier, 1, n);
-        output[i] = byte;
+        extract_function((uint8_t*)(output + i), carrier, 1);
     }
 
-    // extension
+    // extract extension
     int i = 0;
     byte = -1;
     while (byte != 0) {
-        extract_lsbN_bytes(&byte, carrier, 1, n);
+        extract_function(&byte, carrier, 1);
         extension[i] = byte;
         i++;
     }
@@ -147,19 +202,10 @@ void extract() {
     char extension[8];
     uint32_t size;
     char* output;
-    switch (args.steg_method) {
-        case LSB1:
-            output = extract_lsbN(carrier, extension, &size, 1);
-            break;
-        case LSB4:
-            output = extract_lsbN(carrier, extension, &size, 4);
-            break;
-        case LSBI:
-            // output = lsbi();
-            break;
-    }
 
-    // Decrpyt if necessary
+    output = extract_from_carrier(carrier, extension, &size);
+
+    // Decrypt if necessary
 
     // Open output file
     char* output_filename = malloc(strlen(args.output_file) + strlen(extension) + 1);

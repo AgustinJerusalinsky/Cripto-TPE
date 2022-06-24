@@ -1,7 +1,7 @@
 PWD = $(shell pwd)
 
 all:
-	gcc -o stegobmp main.c args.c steg.c -Wall -pedantic -lcrypto
+	gcc -o stegobmp main.c args.c steg.c -g -Wall -pedantic -lcrypto
 
 docker:
 	docker build -t cripto .
@@ -13,6 +13,12 @@ start:
 
 stop:
 	docker stop cripto_container
+
+EMLSB1:
+	./stegobmp --embed -p ejemplo2022/lado.bmp --in ejemplo2022/itba.png --out lsb1_embed.bmp --steg LSB1
+
+EXLSB1:
+	./stegobmp --extract -p lsb1_embed.bmp --out lsb1_extract --steg LSB1 
 
 LSB1:
 	./stegobmp --extract -p ejemplo2022/ladoLSB1.bmp --out lsb1 --steg LSB1 
