@@ -20,6 +20,12 @@ EMLSB1:
 EXLSB1:
 	./stegobmp --extract -p lsb1_embed.bmp --out lsb1_extract --steg LSB1 
 
+EMLSB4:
+	./stegobmp --embed -p ejemplo2022/lado.bmp --in ejemplo2022/itba.png --out lsb4_embed.bmp --steg LSB4
+
+EXLSB4:
+	./stegobmp --extract -p lsb4_embed.bmp --out lsb4_extract --steg LSB4
+
 LSB1:
 	./stegobmp --extract -p ejemplo2022/ladoLSB1.bmp --out lsb1 --steg LSB1 
 
