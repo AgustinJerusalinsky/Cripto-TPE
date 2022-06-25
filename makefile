@@ -45,6 +45,10 @@ LSBI:
 DECLSB1192CBC:
 	./stegobmp --extract -p ejemplo2022/ladoLSB1aes192cbc.bmp --out lsb1 --steg LSB1 -a AES192 -m CBC --pass escondite
 
+
+DECLSBI256OFB:
+	./stegobmp --extract -p ejemplo2022/ladoLSBIaes256ofb.bmp --out lsbi --steg LSBI -a AES256 -m OFB --pass secreto
+
 ENCLSB1:
 	./stegobmp --embed -p ejemplo2022/lado.bmp --in ejemplo2022/itba.png --out lsb1_enc.bmp --steg LSB1 -a AES192 -m CBC --pass escondite
 
