@@ -65,7 +65,7 @@ void parse_arguments(int argc, char** argv) {
         option = getopt_long(argc, argv, opts,
                              long_options, &index);
 
-        if (option == -1) return;
+        if (option == -1) break;
 
         switch (option) {
             case EMBED:
@@ -96,6 +96,10 @@ void parse_arguments(int argc, char** argv) {
                 args.mode = map(modes, modes_ids, optarg);
                 break;
         }
+    }
+
+    if(args.pass[0] != 0 && args.enc_method == NONE) {
+        args.enc_method = AES128;
     }
 
     return;

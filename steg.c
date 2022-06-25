@@ -6,8 +6,10 @@
 #include "bmp.h"
 #include "encrypt.h"
 
+#define MAX_EXTENSION_LENGTH 16
+
 void embed_lsbN_bytes(char* message, int msg_size, FILE* carrier, FILE* output, int n);
-void extract_lsbN_bytes(uint8_t* dest, FILE* carrier, int nbytes, int n);
+void extract_lsbN_bytes(uint8_t* dest, FILE* carrier, uint32_t nbytes, int n);
 
 void embed_lsb1(char* buffer, int size, FILE* carrier, FILE* output) {
     embed_lsbN_bytes(buffer, size, carrier, output, 1);
@@ -18,13 +20,13 @@ void embed_lsb4(char* buffer, int size, FILE* carrier, FILE* output) {
 void embed_lsbi(char* buffer, int size, FILE* carrier, FILE* output) {
 }
 
-void extract_lsb1(uint8_t* dest, FILE* carrier, int nbytes) {
+void extract_lsb1(uint8_t* dest, FILE* carrier, uint32_t nbytes) {
     extract_lsbN_bytes(dest, carrier, nbytes, 1);
 }
-void extract_lsb4(uint8_t* dest, FILE* carrier, int nbytes) {
+void extract_lsb4(uint8_t* dest, FILE* carrier, uint32_t nbytes) {
     extract_lsbN_bytes(dest, carrier, nbytes, 4);
 }
-void extract_lsbi(uint8_t* dest, FILE* carrier, int nbytes) {
+void extract_lsbi(uint8_t* dest, FILE* carrier, uint32_t nbytes) {
 }
 
 uint8_t get_bit(char* message, int bit_index) {
@@ -72,7 +74,7 @@ void embed_into_carrier(char* message, int msg_size, FILE* carrier, FILE* output
     // embed message
     embed_function(message, msg_size, carrier, output);
 
-    if (args.enc_method != NONE) {
+    if (args.enc_method == NONE) {
         // embed extension
         char* extension = strrchr(args.input_file, '.');
         if (!extension) {
@@ -160,9 +162,9 @@ void embed() {
     fclose(input);
 }
 
-void extract_lsbN_bytes(uint8_t* dest, FILE* carrier, int nbytes, int n) {
+void extract_lsbN_bytes(uint8_t* dest, FILE* carrier, uint32_t nbytes, int n) {
     uint8_t bytes[8 / n];
-    for (int i = 0; i < nbytes; i++) {
+    for (uint32_t i = 0; i < nbytes; i++) {
         fread(bytes, 1, 8 / n, carrier);
         uint8_t byte = 0;
 
@@ -175,7 +177,7 @@ void extract_lsbN_bytes(uint8_t* dest, FILE* carrier, int nbytes, int n) {
 
 char* extract_from_carrier(FILE* carrier, char* extension, uint32_t* size) {
     // extract function mapping
-    void (*extract_function)(uint8_t*, FILE*, int);
+    void (*extract_function)(uint8_t*, FILE*, uint32_t);
     switch (args.steg_method) {
         case LSB1:
             extract_function = extract_lsb1;
@@ -199,7 +201,7 @@ char* extract_from_carrier(FILE* carrier, char* extension, uint32_t* size) {
     uint8_t byte;
 
     // extract data
-    for (int i = 0; i < *size; i++) {
+    for (uint32_t i = 0; i < *size; i++) {
         extract_function((uint8_t*)(output + i), carrier, 1);
     }
 
@@ -211,7 +213,7 @@ char* extract_from_carrier(FILE* carrier, char* extension, uint32_t* size) {
     // extract extension
     int i = 0;
     byte = -1;
-    while (byte != 0) {
+    while (byte != 0 && i < MAX_EXTENSION_LENGTH) {
         extract_function(&byte, carrier, 1);
         extension[i] = byte;
         i++;
@@ -233,7 +235,7 @@ void extract() {
     // jump to pixel map
     fseek(carrier, bmp_file_header.offset, SEEK_SET);
 
-    char extension[8];
+    char extension[MAX_EXTENSION_LENGTH];
     uint32_t size;
     char* output;
 
