@@ -14,9 +14,9 @@ void handleErrors(void) {
 }
 
 const EVP_CIPHER *get_cypher() {
-    const EVP_CIPHER *aes128[] = {EVP_aes_128_ecb(), EVP_aes_128_cfb128(), EVP_aes_128_ofb(), EVP_aes_128_cbc()};
-    const EVP_CIPHER *aes192[] = {EVP_aes_192_ecb(), EVP_aes_192_cfb128(), EVP_aes_192_ofb(), EVP_aes_192_cbc()};
-    const EVP_CIPHER *aes256[] = {EVP_aes_256_ecb(), EVP_aes_256_cfb128(), EVP_aes_256_ofb(), EVP_aes_256_cbc()};
+    const EVP_CIPHER *aes128[] = {EVP_aes_128_ecb(), EVP_aes_128_cfb8(), EVP_aes_128_ofb(), EVP_aes_128_cbc()};
+    const EVP_CIPHER *aes192[] = {EVP_aes_192_ecb(), EVP_aes_192_cfb8(), EVP_aes_192_ofb(), EVP_aes_192_cbc()};
+    const EVP_CIPHER *aes256[] = {EVP_aes_256_ecb(), EVP_aes_256_cfb8(), EVP_aes_256_ofb(), EVP_aes_256_cbc()};
     const EVP_CIPHER *des[] = {EVP_des_ecb(), EVP_des_cfb8(), EVP_des_ofb(), EVP_des_cbc()};
     const EVP_CIPHER **chain_list;
 

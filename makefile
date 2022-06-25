@@ -26,11 +26,21 @@ EMLSB4:
 EXLSB4:
 	./stegobmp --extract -p lsb4_embed.bmp --out lsb4_extract --steg LSB4
 
+EMLSBI:
+	./stegobmp --embed -p ejemplo2022/lado.bmp --in ejemplo2022/itba.png --out lsbi_embed.bmp --steg LSBI
+
+EXLSBI:
+	./stegobmp --extract -p lsbi_embed.bmp --out lsbi_extract --steg LSBI
+
+
 LSB1:
 	./stegobmp --extract -p ejemplo2022/ladoLSB1.bmp --out lsb1 --steg LSB1 
 
 LSB4:
 	./stegobmp --extract -p ejemplo2022/ladoLSB4.bmp --out lsb4 --steg LSB4
+
+LSBI:
+	./stegobmp --extract -p ejemplo2022/ladoLSBI.bmp --out lsbi --steg LSBI
 
 DECLSB1192CBC:
 	./stegobmp --extract -p ejemplo2022/ladoLSB1aes192cbc.bmp --out lsb1 --steg LSB1 -a AES192 -m CBC --pass escondite
