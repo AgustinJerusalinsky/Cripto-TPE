@@ -25,8 +25,6 @@ void extract_lsb4(uint8_t* dest, FILE* carrier, uint32_t nbytes) {
     extract_lsbN_bytes(dest, carrier, nbytes, 4);
 }
 
-
-
 uint8_t get_bit(char* message, int bit_index) {
     int byte_index = bit_index / 8;
     int bit_offset = bit_index % 8;
@@ -36,89 +34,95 @@ uint8_t get_bit(char* message, int bit_index) {
 char pattern[4];
 
 void extract_lsbi(uint8_t* dest, FILE* carrier, uint32_t nbytes) {
-    
     uint8_t bytes[8];
     int bit;
     int pattern_idx;
 
     for (uint32_t i = 0; i < nbytes; i++) {
         fread(bytes, 1, 8, carrier);
-        uint8_t byte = 0;       
-        
+        uint8_t byte = 0;
 
         for (int j = 0; j < 8; j++) {
-            pattern_idx = (bytes[j] & 0x06) >>1;
+            pattern_idx = (bytes[j] & 0x06) >> 1;
             bit = (bytes[j] & 0x01);
-            if(pattern[pattern_idx] > 0)
+            if (pattern[pattern_idx] > 0)
                 bit = bit ^ 0x01;
             byte = (byte << 1) | bit;
-
         }
         dest[i] = byte;
     }
-
-    
 }
 
-
 void embed_lsbi(char* message, int msg_size, FILE* carrier, FILE* output) {
-    int changed[4] = {0,0,0,0}; // 00,01,10,11
+    int changed[4] = {0, 0, 0, 0};  // 00,01,10,11
+    int count[4] = {0, 0, 0, 0};    // 00,01,10,11
     uint8_t byte;
     int bit_index = 0;
     int max_bit = msg_size * 8;
 
-    //save file offset    
+    // save file offset
     int offset = ftell(carrier);
+    
+    //jump pattern
+    fseek(carrier, offset+4, SEEK_SET);
+
     while (bit_index < max_bit && fread(&byte, 1, 1, carrier)) {
         uint8_t bit_carrier = 0;
         uint8_t bit_message = 0;
-        
+
         // Apply lsb1
         // bit from carrier
-        bit_carrier =  get_bit((char *)&byte, 7) & 0x01;
+        bit_carrier = get_bit((char*)&byte, 7) & 0x01;
         // bit from message
         bit_message = get_bit(message, bit_index);
         bit_index++;
-       
-        byte = (byte & (0xFF << 1)) | bit_message;
-        
+
+        byte = (byte & 0xFE) | bit_message;
+
         // Check if has changed and Increase or decrease changed
-        if(bit_carrier != bit_message) {
-            changed[(byte & 0x06)>>1]++; 
-        }else {
-            changed[(byte & 0x06)>>1]--;
-        }   
+        if (bit_carrier != bit_message) {
+            changed[(byte & 0x06) >> 1]++;
+        } else {
+            changed[(byte & 0x06) >> 1]--;
+        }
+        count[(byte & 0x06) >> 1]++;
     }
 
+    // check if write is complete
+    if (bit_index != max_bit) {
+        printf("Error: embed_lsbi: write incomplete\n");
+        return;
+    }
 
     // Restore file offset
     fseek(carrier, offset, SEEK_SET);
 
     printf("Embedding...\n");
-    // save pattern
-    char pattern[4] = {0,0,0,0};
-    for (int i = 0; i < 4; i++) {
-        pattern[i] =  changed[i] > 0 ? 1 : 0;
-    }
 
-     printf("pattern %d %d %d %d\n", pattern[0], pattern[1], pattern[2], pattern[3]);
+    // save pattern
+    char pattern[4] = {0, 0, 0, 0};
+    for (int i = 0; i < 4; i++) {
+        pattern[i] = changed[i] > 0 ? 1 : 0;
+    }
+    printf("count: %d %d %d %d\n", count[0], count[1], count[2], count[3]);
+    printf("changed: %d %d %d %d\n", changed[0], changed[1], changed[2], changed[3]);
+    printf("pattern %d %d %d %d\n", pattern[0], pattern[1], pattern[2], pattern[3]);
 
     char bytes[4];
     fread(bytes, 1, 4, carrier);
     for (int i = 0; i < 4; i++) {
-        bytes[i] = (bytes[i] & 0xF0) | pattern[i];
+        bytes[i] = (bytes[i] & 0xFE) | pattern[i];
     }
     fwrite(bytes, 1, 4, output);
 
-
     byte = 0;
     bit_index = 0;
-    while (bit_index < max_bit && fread(&byte, 1, 1, carrier)) { 
+    while (bit_index < max_bit && fread(&byte, 1, 1, carrier)) {
         uint8_t bit = get_bit(message, bit_index);
         bit_index++;
         byte = (byte & (0xFF << 1)) | bit;
         bit = (byte & 0x06) >> 1;
-        if(changed[bit] > 0) {
+        if (changed[bit] > 0) {
             byte = byte ^ 0x01;
         }
 
@@ -140,6 +144,12 @@ void embed_lsbN_bytes(char* message, int msg_size, FILE* carrier, FILE* output, 
 
         fwrite(&byte, 1, 1, output);
     }
+
+    // check if write is complete
+    if (bit_index != max_bits) {
+        printf("Error: embed_lsbi: write incomplete\n");
+        return;
+    }
 }
 
 void embed_into_carrier(char* message, int msg_size, FILE* carrier, FILE* output) {
@@ -157,17 +167,17 @@ void embed_into_carrier(char* message, int msg_size, FILE* carrier, FILE* output
             break;
     }
 
-    char * buffer = malloc(4 + msg_size + MAX_EXTENSION_LENGTH);
+    char* buffer = malloc(4 + msg_size + MAX_EXTENSION_LENGTH);
     unsigned int index = 0;
 
     // embed size
     char big_endian_size[4] = {msg_size >> 24, msg_size >> 16, msg_size >> 8, msg_size};
     memcpy(buffer, big_endian_size, 4);
     index += 4;
-    //embed_function(big_endian_size, 4, carrier, output);
+    // embed_function(big_endian_size, 4, carrier, output);
 
     // embed message
-    //embed_function(message, msg_size, carrier, output);
+    // embed_function(message, msg_size, carrier, output);
     memcpy(buffer + index, message, msg_size);
     index += msg_size;
 
@@ -179,7 +189,7 @@ void embed_into_carrier(char* message, int msg_size, FILE* carrier, FILE* output
         }
         printf("Extension: %s\n", extension);
 
-        //embed_function(extension, strlen(extension) + 1, carrier, output);  //+1 for null terminated
+        // embed_function(extension, strlen(extension) + 1, carrier, output);  //+1 for null terminated
         memcpy(buffer + index, extension, strlen(extension) + 1);
         index += strlen(extension) + 1;
     }
@@ -289,8 +299,8 @@ char* extract_from_carrier(FILE* carrier, char* extension, uint32_t* size) {
             extract_function = extract_lsb4;
             break;
         case LSBI:
-            //extract pattern
-            
+            // extract pattern
+
             fread(pat, 1, 4, carrier);
             pattern[0] = pat[0] & 0x01;
             pattern[1] = pat[1] & 0x01;
