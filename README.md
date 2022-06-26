@@ -11,9 +11,24 @@ Comienza el container
 #### make stop : 
 Para el container
 
-## Ejecución
+## Compilación
 make all
 
+## Ejecución
+### Embed
+`.\stegobmp --embed --steg <LSB1 | LSB4 | LSBI>  -p <carrier> --in <secret> --out <output filename> `
+
+### Extract
+
+`.\stegobmp --extract --steg <metodo de esteganografiado>  -p <carrier> --out <output filename> `
+
+### Encripción
+Tanto en 'embed' como en 'extract' si se requiere encripción se pueden setear los siguientes parametros
+
+`.\stegobmp -a <AES128 | AES192 | AES256 | DES> -m <ECB | CFB | OFB | CBC> --pass <password>`
+
+De no indicarse el modo de encadenamiento se asume CBC\
+De no indicarse el algoritmo de encripción se asume AES128
 ### Distintos modos de ejecución
 
 #### make EMLSB1 : 
@@ -81,4 +96,7 @@ Aplica el extract con lsbi con el archivo grupo21/kings.bmp, generando como sali
 Aplica el extract con lsb4 con el archivo grupo21/kings1.bmp, desencriptando con AES256, modo OFB, password "escondido", y generando como salida el archivo kings1_out
 
 #### make SILENCE : 
-Aplica el extract con lsb4 con el archivo grupo21/silence.bmp, desencriptando con AES128, modo OFB, password "escondido", y generando como salida el archivo silence_out
+Aplica el comando ```strings grupo21/silence.bmp``` y luego podemos observar que el último string es un mensaje escondido.
+
+## Tests
+Ejecutando ```make TEST``` se corre un script de python que genera cada combinación de modo de encadenamiento, método de esteganografía y método de encripción, lo ejecuta utilizando como carrier lado.bmp y como secret itba.png, luego se ejecuta el embeding, posteriormente el extract y se compara el resultado final con el archivo original (itba.png).

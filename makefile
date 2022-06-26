@@ -49,11 +49,11 @@ LSBI:
 	./stegobmp --extract -p ejemplo2022/ladoLSBI.bmp --out lsbi --steg LSBI
 
 DECLSB1192CBC:
-	./stegobmp --extract -p ejemplo2022/ladoLSB1aes192cbc.bmp --out lsb1 --steg LSB1 -a AES192 -m CBC --pass escondite
+	./stegobmp --extract -p ejemplo2022/ladoLSB1aes192cbc.bmp --out dec_lsb1 --steg LSB1 -a AES192 -m CBC --pass escondite
 
 
 DECLSBI256OFB:
-	./stegobmp --extract -p ejemplo2022/ladoLSBIaes256ofb.bmp --out lsbi --steg LSBI -a AES256 -m OFB --pass secreto
+	./stegobmp --extract -p ejemplo2022/ladoLSBIaes256ofb.bmp --out dec_lsbi --steg LSBI -a AES256 -m OFB --pass secreto
 
 ENCLSB1:
 	./stegobmp --embed -p ${CARRIER} --in ${SECRET} --out lsb1_enc.bmp --steg LSB1 -a AES192 -m CBC --pass escondite
@@ -83,8 +83,7 @@ KINGS1:
 	./stegobmp --extract -p grupo21/kings1.bmp --out kings1_out --steg LSB4 -a AES256 -m OFB --pass escondido
 
 SILENCE:
-	./stegobmp --extract -p grupo21/silence.bmp --out silence_out --steg LSB4 -a AES128 -m OFB --pass escondido
-
+	strings grupo21/silence.bmp
 COMPARACION1:
 	./stegobmp --embed -p ${COMPARISON_CARRIER} --in ${COMPARISON_SECRET} --out comparacion1.bmp --steg LSB1
 
@@ -111,7 +110,11 @@ COMPARACION:
 	./analyzer ${COMPARISON_CARRIER} comparacion4.bmp
 	./analyzer ${COMPARISON_CARRIER} comparacioni.bmp
 
+TEST:
+	python3 test.py
+
 clean:
+	rm -rf dec_lsb1.png dec_lsbi.png lsb1.png lsb4.png lsbi.png
 	rm -rf lsb1_embed.bmp lsb4_embed.bmp lsbi_embed.bmp
 	rm -rf lsb1_extract.png lsb4_extract.png lsbi_extract.png
 	rm -rf lsb1_enc.bmp lsb4_enc.bmp lsbi_enc.bmp
