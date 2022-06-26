@@ -201,6 +201,7 @@ void embed_into_carrier(char* message, int msg_size, FILE* carrier, FILE* output
     while (fread(&byte, 1, 1, carrier)) {
         fwrite(&byte, 1, 1, output);
     }
+    free(buffer);
 }
 
 void embed() {
@@ -272,6 +273,8 @@ void embed() {
     fclose(output);
     fclose(carrier);
     fclose(input);
+    free(message);
+    free(header);
 }
 
 void extract_lsbN_bytes(uint8_t* dest, FILE* carrier, uint32_t nbytes, int n) {
@@ -391,4 +394,6 @@ void extract() {
     fwrite(output, size, 1, output_file);
     fclose(output_file);
     fclose(carrier);
+    free(output);
+    free(output_filename);
 }

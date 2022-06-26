@@ -64,9 +64,9 @@ int encrypt(
     int iv_len = EVP_CIPHER_iv_length(cipher);
     int key_len = EVP_CIPHER_key_length(cipher);
 
-    unsigned char *iv = malloc(iv_len);
+    unsigned char iv[iv_len];// = malloc(iv_len);
 
-    unsigned char *key = malloc(key_len);
+    unsigned char key[key_len];// = malloc(key_len);
 
     unsigned char *aad = (unsigned char *)"";
     int aad_len = 0;
@@ -146,9 +146,9 @@ int decrypt(
     int iv_len = EVP_CIPHER_iv_length(cipher);
     int key_len = EVP_CIPHER_key_length(cipher);
 
-    unsigned char *iv = malloc(iv_len);
+    unsigned char iv[iv_len];// = malloc(iv_len);
 
-    unsigned char *key = malloc(key_len);
+    unsigned char key[key_len];// = malloc(key_len);
 
     unsigned char *aad = (unsigned char *)"";
     int aad_len = 0;

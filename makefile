@@ -6,7 +6,7 @@ COMPARISON_CARRIER = "bibloteca.bmp"
 COMPARISON_SECRET = "secret.pdf"
 
 all:
-	gcc -o stegobmp main.c args.c steg.c encrypt.c -g -Wall -pedantic -lcrypto
+	gcc -o stegobmp main.c args.c steg.c encrypt.c -g -Wall -pedantic -fsanitize=address -lcrypto
 	gcc -o analyzer analyzer.c -Wall -pedantic
 
 docker:
@@ -80,7 +80,7 @@ KINGS:
 	./stegobmp --extract -p grupo21/kings.bmp --out kings_out --steg LSBI
 
 KINGS1:
-	./stegobmp --extract -p grupo21/kings1.bmp --out kings1_out --steg LSB4 -a AES256 -m OFB --pass escondidoo
+	./stegobmp --extract -p grupo21/kings1.bmp --out kings1_out --steg LSB4 -a AES256 -m OFB --pass escondido
 
 SILENCE:
 	./stegobmp --extract -p grupo21/silence.bmp --out silence_out --steg LSB4 -a AES128 -m OFB --pass escondido
